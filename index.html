@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>One Problem, Three Paths – AI Math Differentiator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Bricolage+Grotesque:wght@600;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#EAF1F6; --grid:#D3DFE9; --ink:#12223A; --muted:#4D6178; --card:#FBFDFE; --line:#B9C9D8;
+  --accent:#0B8F7F; --accent-soft:#D9F1EC;
+  --bad:#B3261E; --good:#16794C;
+}
+body[data-level="2"]{--accent:#2748D8;--accent-soft:#E0E6FB}
+body[data-level="3"]{--accent:#B5287A;--accent-soft:#F8DFEE}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{
+  margin:0;color:var(--ink);font:400 17px/1.55 "Atkinson Hyperlegible",system-ui,sans-serif;
+  background-color:var(--paper);
+  background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);
+  background-size:28px 28px;
+}
+h1,h2,h3{font-family:"Bricolage Grotesque",system-ui,sans-serif;line-height:1.1;margin:0}
+.wrap{max-width:1000px;margin:0 auto;padding:28px 18px 60px}
+header{padding:8px 0 22px}
+h1{font-size:clamp(2.1rem,6vw,3.4rem);font-weight:800;letter-spacing:-.02em}
+header p{margin:10px 0 0;max-width:56ch;color:var(--muted)}
+
+.levels{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:0 0 22px;border:0;padding:0}
+.levels legend{position:absolute;left:-9999px}
+.lv{position:relative}
+.lv input{position:absolute;opacity:0;inset:0;cursor:pointer;margin:0}
+.lv label{
+  display:block;height:100%;padding:14px 16px;background:var(--card);border:2px solid var(--line);border-radius:6px;
+  transition:border-color .15s, background .15s;
+}
+.lv strong{display:block;font:800 1.15rem "Bricolage Grotesque",sans-serif}
+.lv span{display:block;font-size:.9rem;color:var(--muted);margin-top:2px}
+.lv input:checked + label{border-color:var(--accent);background:var(--accent-soft);box-shadow:inset 6px 0 0 var(--accent)}
+.lv input:focus-visible + label{outline:3px solid var(--ink);outline-offset:2px}
+.lv[data-l="1"] input:checked + label{--accent:#0B8F7F;--accent-soft:#D9F1EC}
+.lv[data-l="2"] input:checked + label{--accent:#2748D8;--accent-soft:#E0E6FB}
+.lv[data-l="3"] input:checked + label{--accent:#B5287A;--accent-soft:#F8DFEE}
+
+.layout{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);gap:18px;align-items:start}
+.panel{background:var(--card);border:2px solid var(--ink);border-radius:6px;padding:20px}
+.panel h2{font-size:1.3rem;font-weight:800;margin-bottom:12px}
+.task-head{display:flex;justify-content:space-between;gap:10px;align-items:flex-start;margin-bottom:10px}
+.badge{font:700 .85rem "Atkinson Hyperlegible",sans-serif;background:var(--accent);color:#fff;padding:3px 10px;border-radius:99px;white-space:nowrap}
+.story{margin:0 0 12px}
+.question{font-weight:700;border-left:5px solid var(--accent);padding-left:12px;margin:0 0 14px}
+.guide{margin:0 0 14px;padding:12px 14px 12px 34px;background:var(--accent-soft);border-radius:4px}
+.guide li{margin:4px 0}
+.guide:empty{display:none}
+
+.answer{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin:14px 0 12px}
+.answer label{display:block;font-size:.9rem;color:var(--muted);margin-bottom:3px}
+.answer input{width:100%;font:700 1.1rem "Atkinson Hyperlegible",sans-serif;padding:9px 10px;border:2px solid var(--line);border-radius:4px;background:#fff;color:var(--ink)}
+.answer input:focus{outline:3px solid var(--accent);border-color:var(--accent)}
+.row{display:flex;flex-wrap:wrap;gap:8px}
+button{font:700 1rem "Atkinson Hyperlegible",sans-serif;padding:10px 16px;border-radius:4px;border:2px solid var(--ink);background:#fff;color:var(--ink);cursor:pointer;min-height:44px}
+button.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+button:hover:not(:disabled){filter:brightness(.95)}
+button:focus-visible{outline:3px solid var(--ink);outline-offset:2px}
+button:disabled{opacity:.5;cursor:not-allowed}
+
+.coach{position:sticky;top:12px;max-height:calc(100vh - 24px);display:flex;flex-direction:column}
+#log{overflow:auto;display:flex;flex-direction:column;gap:10px;min-height:120px}
+.msg{padding:10px 12px;border-radius:4px;background:#EEF3F8;white-space:pre-wrap}
+.msg small{display:block;font-weight:700;color:var(--muted);margin-bottom:2px}
+.msg.hint{background:var(--accent-soft)}
+.msg.good{background:#DDF3E6;border-left:5px solid var(--good)}
+.msg.bad{background:#FBE4E2;border-left:5px solid var(--bad)}
+.msg.sol{background:#fff;border:2px dashed var(--ink)}
+.empty{color:var(--muted);margin:0}
+.note{font-size:.88rem;color:var(--muted);margin-top:10px}
+.skeleton{height:14px;border-radius:3px;background:linear-gradient(90deg,#DDE6EE,#EEF3F8,#DDE6EE);background-size:200% 100%;animation:sh 1.2s linear infinite;margin:10px 0}
+@keyframes sh{to{background-position:-200% 0}}
+@media (prefers-reduced-motion:reduce){.skeleton{animation:none}*{transition:none!important}}
+@media (max-width:760px){
+  .levels{grid-template-columns:1fr}
+  .layout{grid-template-columns:1fr}
+  .coach{position:static;max-height:none}
+}
+</style>
+</head>
+<body data-level="1">
+<div class="wrap">
+  <header>
+    <h1>One Problem, Three Paths</h1>
+    <p>A rectangle is described by its area and its fence length. Pick a level and an AI tutor rewrites the task, the hints and the feedback to match it.</p>
+  </header>
+
+  <fieldset class="levels" id="levels">
+    <legend>Choose a level</legend>
+    <div class="lv" data-l="1"><input type="radio" name="lv" id="lv1" value="1" checked><label for="lv1"><strong>Level 1 · Foundation</strong><span>Small numbers, guided steps, direct hints</span></label></div>
+    <div class="lv" data-l="2"><input type="radio" name="lv" id="lv2" value="2"><label for="lv2"><strong>Level 2 · Standard</strong><span>Grade-level quadratic, guiding questions</span></label></div>
+    <div class="lv" data-l="3"><input type="radio" name="lv" id="lv3" value="3"><label for="lv3"><strong>Level 3 · Advanced</strong><span>River fence, two designs, maximum area</span></label></div>
+  </fieldset>
+
+  <div class="layout">
+    <section class="panel" aria-labelledby="taskTitle">
+      <div class="task-head">
+        <h2 id="taskTitle">Loading…</h2>
+        <span class="badge" id="badge">Foundation</span>
+      </div>
+      <div id="taskBody" aria-live="polite"></div>
+
+      <div class="answer" id="answer"></div>
+      <div class="row">
+        <button class="primary" id="btnCheck">Check answer</button>
+        <button id="btnHint">Hint (0/3)</button>
+        <button id="btnSol">Show solution</button>
+        <button id="btnNew">New numbers</button>
+      </div>
+    </section>
+
+    <aside class="panel coach" aria-labelledby="coachTitle">
+      <h2 id="coachTitle">AI coach</h2>
+      <div id="log" aria-live="polite"><p class="empty">Ask for a hint or check your answer. Replies are tailored to the level you chose.</p></div>
+      <p class="note" id="mode"></p>
+    </aside>
+  </div>
+</div>
+
+<script>
+const $ = (s) => document.querySelector(s);
+const rnd = (a, b) => Math.floor(Math.random() * (b - a + 1)) + a;
+const fmt = (n) => (Number.isInteger(n) ? String(n) : String(+n.toFixed(2)));
+const NAMES = { 1: "Foundation", 2: "Standard", 3: "Advanced" };
+
+let level = 1, facts = null, hints = 0, busy = false, ticket = 0, offline = false;
+
+/* ---------- Verified maths: numbers are generated here, so the answer is always correct ---------- */
+function makeFacts(lv) {
+  if (lv === 1) { const w = rnd(2, 6), l = w + rnd(1, 4); return { P: 2 * (w + l), A: w * l, w, l }; }
+  if (lv === 2) { const w = rnd(4, 14), l = w + rnd(1, 9); return { P: 2 * (w + l), A: w * l, w, l }; }
+  let w, l;
+  do { w = rnd(3, 12); l = rnd(4, 30); } while (2 * w === l);      // avoid the double-root case
+  const F = 2 * w + l;
+  // Second root of 2w² − F·w + A = 0 is l/2, giving the second design (l/2, 2w).
+  return { F, A: w * l, sols: [[w, l], [l / 2, 2 * w]], maxArea: (F * F) / 8 };
+}
+
+function evaluate(a, b, c) {
+  const f = facts, close = (x, y) => Math.abs(x - y) < 1e-6;
+  if (level < 3) {
+    const main = (close(a, f.w) && close(b, f.l)) || (close(a, f.l) && close(b, f.w));
+    return { mainCorrect: main, extensionCorrect: null,
+      info: `sum ${fmt(a + b)} (needed ${f.P / 2}), product ${fmt(a * b)} (needed ${f.A})` };
+  }
+  const main = f.sols.some(([w, l]) => close(a, w) && close(b, l));
+  const ext = Number.isNaN(c) ? null : Math.abs(c - f.maxArea) < 0.01;
+  return { mainCorrect: main, extensionCorrect: ext,
+    info: `2w + l = ${fmt(2 * a + b)} (needed ${f.F}), w·l = ${fmt(a * b)} (needed ${f.A})${ext === null ? "" : "; extension value " + fmt(c)}` };
+}
+
+/* ---------- AI + offline fallback ---------- */
+async function ai(payload) {
+  const r = await fetch("/api/ai", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ level, facts, ...payload }) });
+  if (!r.ok) throw new Error("api " + r.status);
+  const d = await r.json();
+  if (!d.text) throw new Error("empty");
+  return d.text;
+}
+
+function fallbackTask() {
+  const f = facts;
+  if (level === 1) return { title: "Garden fence", story: `A rectangular garden has a fence all the way around it that is ${f.P} m long (this is the perimeter). The garden covers ${f.A} m² (this is the area).`, question: "How long are the two different sides of the garden?",
+    guide: [`Half of the fence is one length plus one width. What is ${f.P} ÷ 2?`, "Which two numbers add up to that half?", `Of those pairs, which one multiplies to ${f.A}?`] };
+  if (level === 2) return { title: "Rectangular plot", story: `A rectangular plot has perimeter ${f.P} m and area ${f.A} m².`, question: "Find the length and width of the plot.", guide: ["Write w + l = P/2, then substitute l into w·l = A."] };
+  return { title: "River field", story: `A farmer has ${f.F} m of fence and uses a straight river as one side of a rectangular field, so only three sides need fence. The field must have an area of ${f.A} m².`, question: "Find a valid design (w, l), where w is each side touching the river and l is the side parallel to it. Extension: what is the largest area possible with this fence?", guide: [] };
+}
+const FB_HINTS = {
+  1: ["Half of the perimeter equals length + width.", "Make a table of pairs with that sum and compute each product.", "Stop when the product equals the area."],
+  2: ["Which two equations connect w and l?", "Substitute l = P/2 − w into w·l = A.", "Rearrange to w² − (P/2)w + A = 0 and factor or use the formula."],
+  3: ["Define w and l, then write the fence equation 2w + l = F.", "Substitute l = F − 2w into w·l = A.", "The quadratic has two roots: check whether both give a valid design."],
+};
+
+/* ---------- UI ---------- */
+function setBusy(b) { busy = b; ["#btnCheck", "#btnHint", "#btnSol", "#btnNew"].forEach((s) => { $(s).disabled = b; }); }
+function say(kind, who, text) {
+  const log = $("#log"); const e = log.querySelector(".empty"); if (e) e.remove();
+  const d = document.createElement("div"); d.className = "msg " + kind;
+  const s = document.createElement("small"); s.textContent = who; d.append(s, document.createTextNode(text));
+  log.append(d); log.scrollTop = log.scrollHeight;
+}
+function parseJSON(t) { const i = t.indexOf("{"), j = t.lastIndexOf("}"); const o = JSON.parse(t.slice(i, j + 1)); if (!o.story || !o.question) throw 0; return o; }
+
+function renderTask(t) {
+  $("#taskTitle").textContent = t.title || "Your task";
+  const body = $("#taskBody"); body.replaceChildren();
+  const p = document.createElement("p"); p.className = "story"; p.textContent = t.story;
+  const q = document.createElement("p"); q.className = "question"; q.textContent = t.question;
+  body.append(p, q);
+  if (t.guide && t.guide.length) { const ol = document.createElement("ol"); ol.className = "guide"; t.guide.forEach((g) => { const li = document.createElement("li"); li.textContent = g; ol.append(li); }); body.append(ol); }
+}
+
+function renderAnswer() {
+  const a = $("#answer");
+  if (level < 3) a.innerHTML = `<div><label for="a1">First side (m)</label><input id="a1" inputmode="decimal" autocomplete="off"></div><div><label for="a2">Second side (m)</label><input id="a2" inputmode="decimal" autocomplete="off"></div>`;
+  else a.innerHTML = `<div><label for="a1">w, side touching the river (m)</label><input id="a1" inputmode="decimal" autocomplete="off"></div><div><label for="a2">l, side parallel to river (m)</label><input id="a2" inputmode="decimal" autocomplete="off"></div><div><label for="a3">Extension: max area (m²)</label><input id="a3" inputmode="decimal" autocomplete="off"></div>`;
+}
+
+async function newTask() {
+  const my = ++ticket;
+  facts = makeFacts(level); hints = 0;
+  $("#btnHint").textContent = "Hint (0/3)";
+  document.body.dataset.level = level; $("#badge").textContent = NAMES[level];
+  renderAnswer();
+  $("#taskTitle").textContent = "Writing your task…";
+  $("#taskBody").innerHTML = '<div class="skeleton"></div><div class="skeleton" style="width:80%"></div><div class="skeleton" style="width:60%"></div>';
+  setBusy(true);
+  let t;
+  try { t = parseJSON(await ai({ action: "task" })); offline = false; }
+  catch { t = fallbackTask(); offline = true; }
+  if (my !== ticket) return;
+  renderTask(t); setBusy(false);
+  $("#mode").textContent = offline ? "AI is unreachable right now, so built-in tasks and hints are used. Numbers and answer checking still work." : "";
+}
+
+const val = (id) => { const e = $(id); return e ? parseFloat(e.value.replace(",", ".")) : NaN; };
+
+$("#btnCheck").onclick = async () => {
+  const a = val("#a1"), b = val("#a2"), c = level === 3 ? val("#a3") : NaN;
+  if (Number.isNaN(a) || Number.isNaN(b)) { say("bad", "Check", "Enter both numbers first."); return; }
+  const v = evaluate(a, b, c), my = ticket;
+  const attempt = level < 3 ? `${a} and ${b}` : `w = ${a}, l = ${b}${Number.isNaN(c) ? "" : ", max area = " + c}`;
+  setBusy(true);
+  let text;
+  try { text = await ai({ action: "check", attempt, verdict: v }); }
+  catch { text = v.mainCorrect ? "Correct! Both conditions hold." : `Not yet. Your numbers give ${v.info}. Compare with the values in the task and try again.`; }
+  if (my !== ticket) return;
+  const ok = v.mainCorrect && v.extensionCorrect !== false;
+  say(ok ? "good" : "bad", ok ? "Correct" : (v.mainCorrect ? "Main answer correct, extension needs work" : "Not yet"), text);
+  setBusy(false);
+};
+
+$("#btnHint").onclick = async () => {
+  if (hints >= 3) { say("hint", "Hint", "You have used all 3 hints. Try the solution if you are stuck."); return; }
+  hints++; $("#btnHint").textContent = `Hint (${hints}/3)`;
+  const attempt = [val("#a1"), val("#a2")].filter((x) => !Number.isNaN(x)).join(", ");
+  const my = ticket; setBusy(true);
+  let text;
+  try { text = await ai({ action: "hint", hintNumber: hints, attempt }); } catch { text = FB_HINTS[level][hints - 1]; }
+  if (my !== ticket) return;
+  say("hint", `Hint ${hints}`, text); setBusy(false);
+};
+
+$("#btnSol").onclick = async () => {
+  const my = ticket; setBusy(true);
+  let text;
+  try { text = await ai({ action: "solution" }); }
+  catch {
+    text = level < 3 ? `w + l = ${facts.P / 2} and w·l = ${facts.A}.\nSo w² − ${facts.P / 2}w + ${facts.A} = 0, which gives w = ${facts.w} or w = ${facts.l}.\nSides: ${facts.w} m and ${facts.l} m.`
+      : `2w + l = ${facts.F} and w·l = ${facts.A}.\nSubstitute l = ${facts.F} − 2w: 2w² − ${facts.F}w + ${facts.A} = 0.\nDesigns (w, l): ${facts.sols.map((s) => `(${s[0]}, ${s[1]})`).join(" and ")}.\nMax area: ${facts.maxArea} m².`;
+  }
+  if (my !== ticket) return;
+  say("sol", "Solution", text); setBusy(false);
+};
+
+$("#btnNew").onclick = () => { $("#log").innerHTML = '<p class="empty">Ask for a hint or check your answer. Replies are tailored to the level you chose.</p>'; newTask(); };
+document.querySelectorAll('input[name="lv"]').forEach((r) => r.addEventListener("change", () => { level = +r.value; $("#btnNew").click(); }));
+
+newTask();
+</script>
+</body>
+</html>
